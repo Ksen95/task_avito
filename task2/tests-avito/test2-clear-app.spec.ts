@@ -7,13 +7,14 @@ import { PNG } from 'pngjs';
 const elementClass = '.desktop-impact-items-F7T6E';
 const outputDir = 'output';
 const bugsDir = 'bugs';
-const screenshotName = 'screenshot_avito_clear';
-const elementsToHideClass = ['.desktop-value-Nd1tR', '.desktop-avatar-cJSQ4'];
+const screenshotNameClear = 'screenshot_avito_clear';
+const elementsToHideClass = ['.desktop-value-Nd1tR', '.desktop-avatar-cJSQ4','.desktop-plyambaText-kXbhS'];
 
 test('Сравнение скриншота элемента на Avito', async ({ page }) => {
   await page.goto('https://www.avito.ru/avito-care/eco-impact');
 
-
+  // Создаём папки, если их нет
+  await fs.promises.mkdir(outputDir, { recursive: true });
   // Делаем скриншот элемента
   await Promise.all(elementsToHideClass.map(async classToHide => {
     await page.$$eval(classToHide, elements => {
@@ -21,7 +22,25 @@ test('Сравнение скриншота элемента на Avito', async 
     });
   }));
   const screenshot = await page.locator(elementClass).screenshot();
-  const referencePath = path.join(outputDir, `${screenshotName}.png`);
+  const referencePath = path.join(outputDir, `${screenshotNameClear}.png`);
+ // Проверяем наличие эталонного скриншота
+ const referenceExists = await fs.promises.access(referencePath, fs.constants.F_OK)
+ .then(() => true)
+ .catch(() => false);
+
+if (!referenceExists) {
+ // Создаём эталонный скриншот
+ console.log('Эталонный скриншот не найден, создаём новый...');
+ // Делаем эталонный скриншот элемента
+ await Promise.all(elementsToHideClass.map(async classToHide => {
+  await page.$$eval(classToHide, elements => {
+    elements.forEach(element => element.style.display = 'none');
+  });
+}));
+  const screenshotNew = await page.locator(elementClass).screenshot();
+   const screenshotPath = path.join(outputDir, `${screenshotNameClear}.png`);
+   await fs.promises.writeFile(screenshotPath, screenshotNew);
+ }
 
   // Загружаем эталонный скриншот
   const referenceImg = PNG.sync.read(await fs.promises.readFile(referencePath));
@@ -55,9 +74,10 @@ test('Сравнение скриншота элемента на Avito', async 
         }
       }
     }
-
+    // Создаём папки, если их нет
+    await fs.promises.mkdir(bugsDir, { recursive: true });
      // Сохраняем изменённый скриншот
-     const diffPath = path.join(bugsDir, `${screenshotName}-test2-diff.png`);
+     const diffPath = path.join(bugsDir, `${screenshotNameClear}-test2-diff.png`);
      await fs.promises.writeFile(diffPath, PNG.sync.write(diff));
 
      // Провалить тест 
